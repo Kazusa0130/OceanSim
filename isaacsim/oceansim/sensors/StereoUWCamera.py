@@ -153,7 +153,7 @@ class StereoUWCamera:
             return translation
 
     def initialize(self,
-                   UW_param: np.ndarray = None,
+                   UW_param: np.ndarray = np.array([0.0, 0.31, 0.24, 0.05, 0.05, 0.2, 0.05, 0.05, 0.05]),
                    viewport: bool = True,
                    writing_dir: str = None,
                    UW_yaml_path: str = None,
@@ -175,6 +175,10 @@ class StereoUWCamera:
             ros2_pub_frequency (int, optional): ROS2 publish frequency. Defaults to 5.
             ros2_pub_jpeg_quality (int, optional): ROS2 JPEG quality. Defaults to 50.
         """
+        # Use default UW_param if None
+        if UW_param is None:
+            UW_param = np.array([0.0, 0.31, 0.24, 0.05, 0.05, 0.2, 0.05, 0.05, 0.05])
+
         # Set focal length and clipping range for both cameras
         self.left_cam.set_focal_length(self._focal_length)
         self.left_cam.set_clipping_range(*self._clipping_range)
