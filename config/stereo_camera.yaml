@@ -1,7 +1,35 @@
 # Stereo Camera Configuration for OceanSim
-# This file contains parameters for the stereo underwater camera system
+# This file contains extrinsic and intrinsic parameters for the stereo camera
+# mounted on the robot (rob).
 
 stereo_camera:
+  # ========== EXTRINSIC PARAMETERS (Camera to Robot Transformation) ==========
+  # These parameters define the position and orientation of the stereo camera
+  # relative to the robot's body frame.
+
+  # Translation offset in robot's local frame (x, y, z) in meters
+  # X: Forward (positive) / Backward (negative)
+  # Y: Left (positive) / Right (negative)
+  # Z: Up (positive) / Down (negative)
+  #
+  # Default: Front of robot, slightly above center
+  # Example values for different mounting positions:
+  #   - Front mounting: [0.3, 0.0, 0.1]
+  #   - Top mounting: [0.0, 0.0, 0.2]
+  #   - Bottom mounting (looking down): [0.0, 0.0, -0.1]
+  translation: [0.3, 0.0, 0.1]
+
+  # Orientation as quaternion (w, x, y, z) in robot's local frame
+  # Default: Identity quaternion (no rotation, facing forward)
+  # Common orientations:
+  #   - Forward: [1.0, 0.0, 0.0, 0.0]
+  #   - Downward (pitch -90°): [0.707, 0.0, 0.0, -0.707]
+  #   - Upward (pitch +90°): [0.707, 0.0, 0.0, 0.707]
+  #   - Left (yaw +90°): [0.707, 0.0, 0.707, 0.0]
+  #   - Right (yaw -90°): [0.707, 0.0, -0.707, 0.0]
+  orientation: [1.0, 0.0, 0.0, 0.0]
+
+  # ========== STEREO PARAMETERS ==========
   # Camera baseline (distance between left and right camera centers) in meters
   # Typical values:
   #   - Narrow baseline (0.05-0.1m): For close-range inspection
@@ -9,6 +37,7 @@ stereo_camera:
   #   - Wide baseline (0.2-0.3m): Longer range depth estimation
   baseline: 0.12
 
+  # ========== INTRINSIC PARAMETERS ==========
   # Camera intrinsic parameters
   focal_length: 2.1  # Focal length in mm
 
@@ -21,28 +50,18 @@ stereo_camera:
   # Clipping range (near, far) in meters
   clipping_range: [0.1, 100.0]
 
-  # Camera translation offset in local frame (x, y, z) in meters
-  # Note: The Y component will be adjusted by +/- baseline/2 for left/right cameras
-  translation: [0.3, 0.0, 0.1]
-
-  # Camera orientation as quaternion (w, x, y, z)
-  # Default is identity (no rotation)
-  orientation: [1.0, 0.0, 0.0, 0.0]
-
-  # ROS2 configuration
+  # ========== ROS2 CONFIGURATION ==========
   ros2:
     enable: true
     base_topic: "/oceansim/robot/stereo"
     publish_frequency: 5  # Hz
     jpeg_quality: 50      # JPEG compression quality (0-100)
 
-  # Viewport visualization
+  # ========== VIEWPORT VISUALIZATION ==========
   viewport:
     enable: true
-    # Set to true to show both left and right camera views
-    show_both: true
 
-  # Data recording (set to null or path to enable)
+  # ========== DATA RECORDING ==========
   recording:
-    directory: null  # Example: "/path/to/recordings"
+    directory: null  # Set to path to enable recording, e.g., "/path/to/recordings"
     format: "png"

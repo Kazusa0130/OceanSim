@@ -74,6 +74,7 @@ class StereoUWCamera:
         self._clipping_range = clipping_range
         self._resolution = resolution
         self._frequency = frequency
+        self._orientation = orientation
 
         # Calculate left and right camera translations based on baseline
         # Left camera is at -baseline/2 in Y, right camera at +baseline/2 in Y
@@ -278,3 +279,15 @@ class StereoUWCamera:
             tuple: (width, height) resolution
         """
         return self._resolution if self._resolution else (1920, 1080)
+
+    def get_extrinsics(self) -> dict:
+        """Get camera extrinsics (transformation relative to parent/rob).
+
+        Returns:
+            dict: Dictionary containing translation and orientation
+        """
+        return {
+            'translation': self.left_cam._translation if hasattr(self.left_cam, '_translation') else None,
+            'orientation': self._orientation,
+            'baseline': self._baseline
+        }

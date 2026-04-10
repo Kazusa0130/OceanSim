@@ -2,135 +2,100 @@
 
 ## 概述
 
-OceanSim 现已支持双目水下相机系统。双目相机由两个并排的 UW_Camera 组成，通过配置文件可以灵活调整基线（baseline）等参数。
+OceanSim 支持双目水下相机系统。双目相机作为机器人的感知传感器，通过配置文件管理相机到机器人的外参。
 
 ## 配置文件
 
 配置文件位置：`config/stereo_camera.yaml`
 
-### 配置参数说明
+## 外参配置（相机到机器人的变换）
+
+### 平移 (translation)
+
+定义相机在机器人局部坐标系中的位置（单位：米）：
 
 ```yaml
-stereo_camera:
-  # 基线长度（单位：米）
-  # 左相机和右相机中心之间的距离
-  # 典型值：
-  #   - 窄基线 (0.05-0.1m): 近距离检测
-  #   - 中等基线 (0.1-0.2m): 通用水下机器人应用
-  #   - 宽基线 (0.2-0.3m): 远距离深度估计
-  baseline: 0.12
-
-  # 焦距（单位：毫米）
-  focal_length: 2.1
-
-  # 分辨率（宽 x 高，单位：像素）
-  resolution: [1920, 1080]
-
-  # 更新频率（Hz，null 表示自动）
-  frequency: 30
-
-  # 裁剪范围（近裁剪面, 远裁剪面），单位：米
-  clipping_range: [0.1, 100.0]
-
-  # 相机在局部坐标系中的平移偏移（x, y, z），单位：米
-  # 注意：Y 分量会根据基线自动调整为 +/- baseline/2
-  translation: [0.3, 0.0, 0.1]
-
-  # 相机朝向，四元数格式（w, x, y, z）
-  orientation: [1.0, 0.0, 0.0, 0.0]
-
-  # ROS2 配置
-  ros2:
-    enable: true
-    base_topic: "/oceansim/robot/stereo"
-    publish_frequency: 5
-    jpeg_quality: 50
-
-  # 视口可视化
-  viewport:
-    enable: true
-    show_both: true
-
-  # 数据录制
-  recording:
-    directory: null
-    format: "png"
+translation: [0.3, 0.0, 0.1]  # [x, y, z]
 ```
+
+- **X**: 向前为正，向后为负
+- **Y**: 向左为正，向右为负
+- **Z**: 向上为正，向下为负
+
+常用安装位置示例：
+- 前向安装（导航）：`[0.3, 0.0, 0.1]`
+- 顶部安装：`[0.0, 0.0, 0.2]`
+- 底部安装（向下看）：`[0.0, 0.0, -0.1]`
+
+### 朝向 (orientation)
+
+定义相机在机器人局部坐标系中的朝向，使用四元数 (w, x, y, z)：
+
+```yaml
+orientation: [1.0, 0.0, 0.0, 0.0]  # 单位四元数（无旋转）
+```
+
+常用朝向：
+- 前向：`[1.0, 0.0, 0.0, 0.0]`
+- 向下（俯仰-90°）：`[0.707, 0.0, 0.0, -0.707]`
+- 向上（俯仰+90°）：`[0.707, 0.0, 0.0, 0.707]`
+- 向左（偏航+90°）：`[0.707, 0.0, 0.707, 0.0]`
+- 向右（偏航-90°）：`[0.707, 0.0, -0.707, 0.0]`
+
+## 基线配置
+
+```yaml
+baseline: 0.12  # 单位：米
+```
+
+基线选择建议：
+- 窄基线 (0.05-0.1m)：近距离检测
+- 中等基线 (0.1-0.2m)：通用水下机器人应用
+- 宽基线 (0.2-0.3m)：远距离深度估计
 
 ## 使用方法
 
 ### 1. 启用双目相机
 
-在 `ui_builder.py` 中，`_on_init()` 方法内设置：
+在 `ui_builder.py` 中设置：
 
 ```python
-self._use_stereo_camera = True  # 启用双目相机
-self._stereo_config_path = "config/stereo_camera.yaml"  # 配置文件路径
+self._use_stereo_camera = True
 ```
 
-### 2. 修改基线参数
+### 2. 修改外参
 
-编辑 `config/stereo_camera.yaml` 文件：
+编辑 `config/stereo_camera.yaml`：
 
 ```yaml
 stereo_camera:
-  baseline: 0.15  # 修改为你需要的基线长度（单位：米）
+  translation: [0.3, 0.0, 0.1]  # 修改安装位置
+  orientation: [1.0, 0.0, 0.0, 0.0]  # 修改朝向
+  baseline: 0.12  # 修改基线
 ```
 
-### 3. 运行示例
+### 3. 运行仿真
 
-1. 打开 Isaac Sim 并加载 OceanSim 扩展
-2. 在 UI 中勾选 "Underwater Camera" 选项
-3. 点击 "LOAD" 按钮加载场景
-4. 点击 "RUN" 运行仿真
+1. 在 UI 中勾选 "Underwater Camera"
+2. 点击 "LOAD" 加载场景
+3. 点击 "RUN" 运行仿真
 
-### 4. ROS2 话题
+双目相机会自动绑定到机器人上，作为其子 prim，跟随机器人移动。
 
-双目相机会发布以下 ROS2 话题：
+## ROS2 话题
 
-- `/oceansim/robot/stereo/left` - 左相机图像（CompressedImage）
-- `/oceansim/robot/stereo/right` - 右相机图像（CompressedImage）
+- `/oceansim/robot/stereo/left` - 左相机图像
+- `/oceansim/robot/stereo/right` - 右相机图像
 
-## 基线选择建议
+## 绑定机制
 
-| 应用场景 | 推荐基线 | 说明 |
-|---------|---------|------|
-| 近距离检测（< 2m） | 0.05-0.1m | 更好的近距离精度 |
-| 中距离操作（2-10m） | 0.1-0.15m | 平衡精度和视差范围 |
-| 远距离导航（> 10m） | 0.15-0.3m | 更大的可测量深度范围 |
-
-## 代码架构
-
-### 文件结构
-
+双目相机在 USD 场景图中的路径：
 ```
-isaacsim/oceansim/sensors/
-├── UW_Camera.py          # 单目水下相机（基础类）
-└── StereoUWCamera.py     # 双目水下相机（新增）
-
-config/
-├── stereo_camera.yaml    # 双目相机配置文件
-└── stereo_camera_README.md  # 本说明文件
+/World/rob/stereo_camera_left
+/World/rob/stereo_camera_right
 ```
 
-### 类关系
-
-```
-UW_Camera (单目相机基类)
-    ↑
-StereoUWCamera (双目相机)
-    ├── left_cam: UW_Camera (左相机)
-    └── right_cam: UW_Camera (右相机)
-```
-
-## 注意事项
-
-1. **坐标系**：双目相机的两个相机沿 Y 轴排列（水平排列）
-   - 左相机位置：translation[1] - baseline/2
-   - 右相机位置：translation[1] + baseline/2
-
-2. **视差与深度**：基线越长，可测量的最大深度越大，但近距离盲区也会增加
-
-3. **性能**：双目相机同时渲染两个视图，GPU 负载约为单目相机的两倍
-
-4. **修改生效**：修改 YAML 配置文件后，需要重新加载场景才能生效
+作为 `/World/rob` 的子 prim，相机会：
+- 跟随机器人平移和旋转
+- 继承机器人的坐标变换
+- 在机器人移动时保持相对位姿不变

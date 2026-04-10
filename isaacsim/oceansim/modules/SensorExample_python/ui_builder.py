@@ -325,19 +325,19 @@ class UIBuilder():
             
         if self._use_camera:
             if self._use_stereo_camera:
-                # Use stereo camera
+                # Use stereo camera - mounted on robot for perception
                 from isaacsim.oceansim.sensors.StereoUWCamera import StereoUWCamera
 
+                stereo_prim_path = robot_prim_path + '/stereo_camera'
                 self._stereo_cam = StereoUWCamera(
-                    prim_path_prefix=robot_prim_path + '/stereo_camera',
-                    name="StereoUWCamera",
-                    resolution=[1920, 1080],
-                    translation=self._cam_trans,
+                    prim_path_prefix=stereo_prim_path,
+                    name="Rob_StereoCamera",
                     yaml_config_path=self._stereo_config_path
                 )
-                # Store baseline for reference
-                self._stereo_baseline = self._stereo_cam.get_baseline()
-                print(f'[UIBuilder] Stereo camera loaded with baseline: {self._stereo_baseline}m')
+                # Get extrinsics from camera
+                extrinsics = self._stereo_cam.get_extrinsics()
+                self._stereo_baseline = extrinsics['baseline']
+                print(f'[UIBuilder] Stereo camera mounted on robot: {stereo_prim_path}')
             else:
                 # Use mono camera (legacy)
                 from isaacsim.oceansim.sensors.UW_Camera import UW_Camera
