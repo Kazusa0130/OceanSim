@@ -44,7 +44,13 @@ class MHL_Sensor_Example_Scenario():
         if self._sonar is not None:
             self._sonar.sonar_initialize(include_unlabelled=True)
         if self._cam is not None:
-            self._cam.initialize()
+            # Check if it's a stereo camera
+            if hasattr(self._cam, 'left_cam') and hasattr(self._cam, 'right_cam'):
+                # It's a StereoUWCamera
+                self._cam.initialize()
+            else:
+                # It's a mono UW_Camera
+                self._cam.initialize()
         if self._DVL is not None:
             self._DVL_reading = [0.0, 0.0, 0.0]
         if self._baro is not None:
@@ -154,6 +160,7 @@ class MHL_Sensor_Example_Scenario():
             self._sonar.close()
         if self._cam is not None:
             self._cam.close()
+            # For stereo camera, close() handles both left and right cameras
 
         # clear the keyboard subscription
         if self._ctrl_mode=="Manual control":
@@ -167,6 +174,7 @@ class MHL_Sensor_Example_Scenario():
         self._rob = None
         self._sonar = None
         self._cam = None
+        self._stereo_cam = None
         self._DVL = None
         self._baro = None
         self._running_scenario = False
@@ -184,7 +192,13 @@ class MHL_Sensor_Example_Scenario():
         if self._sonar is not None:
             self._sonar.make_sonar_data()
         if self._cam is not None:
-            self._cam.render()
+            # Check if it's a stereo camera (has render method that calls both cameras)
+            if hasattr(self._cam, 'left_cam') and hasattr(self._cam, 'right_cam'):
+                # It's a StereoUWCamera, call its render method
+                self._cam.render()
+            else:
+                # It's a mono UW_Camera
+                self._cam.render()
         if self._DVL is not None:
             self._DVL_reading = self._DVL.get_linear_vel()
         if self._baro is not None:

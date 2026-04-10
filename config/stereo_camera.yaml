@@ -1,0 +1,48 @@
+# Stereo Camera Configuration for OceanSim
+# This file contains parameters for the stereo underwater camera system
+
+stereo_camera:
+  # Camera baseline (distance between left and right camera centers) in meters
+  # Typical values:
+  #   - Narrow baseline (0.05-0.1m): For close-range inspection
+  #   - Medium baseline (0.1-0.2m): General purpose underwater robotics
+  #   - Wide baseline (0.2-0.3m): Longer range depth estimation
+  baseline: 0.12
+
+  # Camera intrinsic parameters
+  focal_length: 2.1  # Focal length in mm
+
+  # Resolution (width, height) in pixels
+  resolution: [1920, 1080]
+
+  # Update frequency in Hz (None for automatic)
+  frequency: 30
+
+  # Clipping range (near, far) in meters
+  clipping_range: [0.1, 100.0]
+
+  # Camera translation offset in local frame (x, y, z) in meters
+  # Note: The Y component will be adjusted by +/- baseline/2 for left/right cameras
+  translation: [0.3, 0.0, 0.1]
+
+  # Camera orientation as quaternion (w, x, y, z)
+  # Default is identity (no rotation)
+  orientation: [1.0, 0.0, 0.0, 0.0]
+
+  # ROS2 configuration
+  ros2:
+    enable: true
+    base_topic: "/oceansim/robot/stereo"
+    publish_frequency: 5  # Hz
+    jpeg_quality: 50      # JPEG compression quality (0-100)
+
+  # Viewport visualization
+  viewport:
+    enable: true
+    # Set to true to show both left and right camera views
+    show_both: true
+
+  # Data recording (set to null or path to enable)
+  recording:
+    directory: null  # Example: "/path/to/recordings"
+    format: "png"

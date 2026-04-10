@@ -22,6 +22,7 @@ from isaacsim.core.utils.extensions import get_extension_path
 from .scenario import MHL_Sensor_Example_Scenario
 from .global_variables import EXTENSION_DESCRIPTION, EXTENSION_TITLE, EXTENSION_LINK
 from isaacsim.oceansim.utils.assets_utils import get_oceansim_assets_path
+from pathlib import Path
 
 class UIBuilder():
     def __init__(self):
@@ -231,13 +232,19 @@ class UIBuilder():
         self._sonar = None
         self._sonar_trans = np.array([0.3,0.0, 0.3])
         self._cam = None
+        self._stereo_cam = None  # New stereo camera
         self._cam_trans = np.array([0.3,0.0, 0.1])
         self._cam_focal_length = 21
         self._DVL = None
         self._DVL_trans = np.array([0,0,-0.1])
         self._baro = None
         self._water_surface = 1.43389 # Arbitrary
-        
+
+        # Stereo camera configuration
+        self._use_stereo_camera = True  # Set to True to use stereo camera instead of mono
+        self._stereo_config_path = str(Path(__file__).parent.parent.parent.parent.parent.parent / "config" / "stereo_camera.yaml")
+        self._stereo_baseline = 0.12  # Default baseline in meters (can be overridden by YAML)
+
         # Scenario
         self._scenario = MHL_Sensor_Example_Scenario()
 
@@ -317,13 +324,29 @@ class UIBuilder():
                                             )
             
         if self._use_camera:
-            from isaacsim.oceansim.sensors.UW_Camera import UW_Camera
+            if self._use_stereo_camera:
+                # Use stereo camera
+                from isaacsim.oceansim.sensors.StereoUWCamera import StereoUWCamera
 
-            self._cam = UW_Camera(prim_path=robot_prim_path + '/UW_camera',
-                                    resolution=[1920,1080],
-                                    translation=self._cam_trans)
-            self._cam.set_focal_length(0.1 * self._cam_focal_length)
-            self._cam.set_clipping_range(0.1, 100)
+                self._stereo_cam = StereoUWCamera(
+                    prim_path_prefix=robot_prim_path + '/stereo_camera',
+                    name="StereoUWCamera",
+                    resolution=[1920, 1080],
+                    translation=self._cam_trans,
+                    yaml_config_path=self._stereo_config_path
+                )
+                # Store baseline for reference
+                self._stereo_baseline = self._stereo_cam.get_baseline()
+                print(f'[UIBuilder] Stereo camera loaded with baseline: {self._stereo_baseline}m')
+            else:
+                # Use mono camera (legacy)
+                from isaacsim.oceansim.sensors.UW_Camera import UW_Camera
+
+                self._cam = UW_Camera(prim_path=robot_prim_path + '/UW_camera',
+                                        resolution=[1920,1080],
+                                        translation=self._cam_trans)
+                self._cam.set_focal_length(0.1 * self._cam_focal_length)
+                self._cam.set_clipping_range(0.1, 100)
             
         if self._use_DVL:
             from isaacsim.oceansim.sensors.DVLsensor import DVLsensor
@@ -357,7 +380,9 @@ class UIBuilder():
 
     def _reset_scenario(self):
         self._scenario.teardown_scenario()
-        self._scenario.setup_scenario(self._rob, self._sonar, self._cam, self._DVL, self._baro, self._ctrl_mode)
+        # Pass stereo camera if using stereo mode, otherwise pass mono camera
+        camera = self._stereo_cam if self._use_stereo_camera else self._cam
+        self._scenario.setup_scenario(self._rob, self._sonar, camera, self._DVL, self._baro, self._ctrl_mode)
     def _on_post_reset_btn(self):
         """
         This function is attached to the Reset Button as the post_reset_fn callback.
