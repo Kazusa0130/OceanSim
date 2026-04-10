@@ -54,7 +54,7 @@ class StereoUWCamera:
         self._prim_path_prefix = prim_path_prefix
 
         # Load config from YAML if provided
-        if yaml_config_path is not None:
+        if yaml_config_path is not None and yaml_config_path != '':
             config = self._load_yaml_config(yaml_config_path)
             baseline = config.get('baseline', baseline)
             frequency = config.get('frequency', frequency)
@@ -66,6 +66,8 @@ class StereoUWCamera:
                 translation = config.get('translation', None)
             if orientation is None:
                 orientation = config.get('orientation', None)
+        else:
+            print(f'[{self._name}] No YAML config provided. Using default parameters: baseline={baseline}m')
 
         self._baseline = baseline
         self._focal_length = focal_length
@@ -115,6 +117,9 @@ class StereoUWCamera:
             dict: Configuration dictionary
         """
         config = {}
+        if yaml_path is None or yaml_path == '':
+            return config
+
         try:
             with open(yaml_path, 'r') as file:
                 yaml_content = yaml.safe_load(file)
@@ -124,7 +129,7 @@ class StereoUWCamera:
                 else:
                     carb.log_warn(f'[{self._name}] No "stereo_camera" section found in {yaml_path}')
         except FileNotFoundError:
-            carb.log_error(f'[{self._name}] YAML config file not found: {yaml_path}')
+            carb.log_warn(f'[{self._name}] YAML config file not found: {yaml_path}. Using default parameters.')
         except yaml.YAMLError as exc:
             carb.log_error(f'[{self._name}] Error parsing YAML file: {exc}')
 

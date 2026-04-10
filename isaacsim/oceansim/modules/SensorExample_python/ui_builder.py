@@ -242,7 +242,7 @@ class UIBuilder():
 
         # Stereo camera configuration
         self._use_stereo_camera = True  # Set to True to use stereo camera instead of mono
-        self._stereo_config_path = str(Path(__file__).parent.parent.parent.parent.parent.parent / "config" / "stereo_camera.yaml")
+        self._stereo_config_path = "/root/isaacsim/extsUser/OceanSim/config/stereo_camera.yaml"
         self._stereo_baseline = 0.12  # Default baseline in meters (can be overridden by YAML)
 
         # Scenario
