@@ -185,6 +185,20 @@ class StereoUWCamera:
         self.right_cam.set_focal_length(self._focal_length)
         self.right_cam.set_clipping_range(*self._clipping_range)
 
+        # Create shared ROS2 node for stereo camera to avoid resource conflicts
+        shared_ros2_node = None
+        if enable_ros2_pub:
+            try:
+                import rclpy
+                if not rclpy.ok():
+                    rclpy.init()
+                node_name = f'oceansim_stereo_{self._name.lower()}_pub'.replace(' ', '_')
+                shared_ros2_node = rclpy.create_node(node_name)
+                print(f'[{self._name}] Shared ROS2 node created: {node_name}')
+            except Exception as e:
+                print(f'[{self._name}] Failed to create shared ROS2 node: {e}')
+                enable_ros2_pub = False
+
         # Initialize left camera
         left_topic = f"{uw_img_topic}/left" if uw_img_topic else "/oceansim/robot/stereo/left"
         self.left_cam.initialize(
@@ -196,7 +210,8 @@ class StereoUWCamera:
             enable_ros2_pub=enable_ros2_pub,
             uw_img_topic=left_topic,
             ros2_pub_frequency=ros2_pub_frequency,
-            ros2_pub_jpeg_quality=ros2_pub_jpeg_quality
+            ros2_pub_jpeg_quality=ros2_pub_jpeg_quality,
+            ros2_node=shared_ros2_node
         )
 
         # Initialize right camera
@@ -210,8 +225,12 @@ class StereoUWCamera:
             enable_ros2_pub=enable_ros2_pub,
             uw_img_topic=right_topic,
             ros2_pub_frequency=ros2_pub_frequency,
-            ros2_pub_jpeg_quality=ros2_pub_jpeg_quality
+            ros2_pub_jpeg_quality=ros2_pub_jpeg_quality,
+            ros2_node=shared_ros2_node
         )
+
+        # Store shared node for cleanup
+        self._shared_ros2_node = shared_ros2_node
 
         print(f'[{self._name}] Both cameras initialized successfully')
 
@@ -224,6 +243,15 @@ class StereoUWCamera:
         """Clean up resources for both cameras."""
         self.left_cam.close()
         self.right_cam.close()
+
+        # Clean up shared ROS2 node
+        if hasattr(self, '_shared_ros2_node') and self._shared_ros2_node is not None:
+            try:
+                self._shared_ros2_node.destroy_node()
+                print(f'[{self._name}] Shared ROS2 node destroyed')
+            except Exception as e:
+                print(f'[{self._name}] Error destroying shared ROS2 node: {e}')
+
         print(f'[{self._name}] Stereo camera resources released')
 
     def get_baseline(self) -> float:

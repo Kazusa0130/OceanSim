@@ -71,16 +71,17 @@ class UW_Camera(Camera):
 
         super().__init__(prim_path, name, frequency, dt, resolution, position, orientation, translation, render_product_path)
 
-    def initialize(self, 
+    def initialize(self,
                    UW_param: np.ndarray = np.array([0.0, 0.31, 0.24, 0.05, 0.05, 0.2, 0.05, 0.05, 0.05 ]),
                    viewport: bool = True,
                    writing_dir: str = None,
                    UW_yaml_path: str = None,
                    physics_sim_view=None,
-                   enable_ros2_pub=True, uw_img_topic="/oceansim/robot/uw_img", ros2_pub_frequency=5, ros2_pub_jpeg_quality=50):
-        
+                   enable_ros2_pub=True, uw_img_topic="/oceansim/robot/uw_img", ros2_pub_frequency=5, ros2_pub_jpeg_quality=50,
+                   ros2_node=None):
+
         """Configure underwater rendering properties and initialize pipelines.
-    
+
         Args:
             UW_param (np.ndarray, optional): Underwater parameters array:
                 [0:3] - Backscatter value (RGB)
@@ -90,12 +91,13 @@ class UW_Camera(Camera):
             viewport (bool, optional): Enable viewport visualization. Defaults to True.
             writing_dir (str, optional): Directory to save rendered images. Defaults to None.
             UW_yaml_path (str, optional): Path to YAML file with water properties. Defaults to None.
-            physics_sim_view (_type_, optional): _description_. Defaults to None.          
+            physics_sim_view (_type_, optional): _description_. Defaults to None.
             enable_ros2_pub (bool, optional): Enable ROS2 communication. Defaults to True.
             uw_img_topic (str, optional): ROS2 topic name for UW image. Defaults to "/oceansim/robot/uw_img".
             ros2_pub_frequency (int, optional): ROS2 publish frequency. Defaults to 5.
             ros2_pub_jpeg_quality (int, optional): ROS2 publish jpeg quality. Defaults to 50.
-    
+            ros2_node (Node, optional): External ROS2 node to use. If provided, won't create a new node.
+
         """
         self._id = 0
         self._viewport = viewport
@@ -140,6 +142,7 @@ class UW_Camera(Camera):
         self._last_publish_time = 0.0
         self._ros2_pub_frequency = ros2_pub_frequency     # publish frequency, hz
         self._ros2_pub_jpeg_quality = ros2_pub_jpeg_quality
+        self._external_ros2_node = ros2_node  # Store external node reference
         self._setup_ros2_publisher()
         
         print(f'[{self._name}] Initialized successfully. Data writing: {self._writing}')
@@ -151,7 +154,18 @@ class UW_Camera(Camera):
         try:
             if not self._enable_ros2_pub:
                 return
-            
+
+            # Use external node if provided (for stereo camera)
+            if self._external_ros2_node is not None:
+                self._ros2_uw_img_node = self._external_ros2_node
+                self._uw_img_pub = self._ros2_uw_img_node.create_publisher(
+                    CompressedImage,
+                    self._uw_img_topic,
+                    10
+                )
+                print(f'[{self._name}] ROS2 publisher created using external node, topic: {self._uw_img_topic}')
+                return
+
             # Initialize ROS2 context if not already done
             if not rclpy.ok():
                 rclpy.init()
@@ -161,11 +175,11 @@ class UW_Camera(Camera):
             node_name = f'oceansim_rob_uw_img_pub_{self._name.lower()}'.replace(' ', '_')
             self._ros2_uw_img_node = rclpy.create_node(node_name)
             self._uw_img_pub = self._ros2_uw_img_node.create_publisher(
-                CompressedImage, 
-                self._uw_img_topic, 
+                CompressedImage,
+                self._uw_img_topic,
                 10
             )
-        
+
         except Exception as e:
             print(f'[{self._name}] ROS2 uw image publisher setup failed: {e}')
 
@@ -203,7 +217,9 @@ class UW_Camera(Camera):
             # Publish the message
             self._uw_img_pub.publish(msg)
 
-            rclpy.spin_once(self._ros2_uw_img_node, timeout_sec=0.0)
+            # Only call spin_once if not using external node (to avoid conflicts in stereo camera)
+            if self._external_ros2_node is None:
+                rclpy.spin_once(self._ros2_uw_img_node, timeout_sec=0.0)
 
             self._last_publish_time = current_time
 
